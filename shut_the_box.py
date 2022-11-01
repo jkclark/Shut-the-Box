@@ -11,7 +11,11 @@ Strategies examined here:
     - Random (find all possible solutions, pick one randomly)
     - Fewest numbers possible (e.g., choose [2, 4] over [1, 2, 3]), then lowest/highest
     - Most numbers possible (e.g., choose [1, 2, 3] over [2, 4]), then lowest/highest
+    - TODO: What about strategies that change when only certain numbers remain?
+    - TODO: Strategy where the risk of ruin for a given set of numbers is calculated in advance,
+      then choosing which number to remove is a function of the EV of the subsequent positions
 
+TODO: Split this module up
 TODO: Write tests for each strategy
 TODO: Show histogram of scores for games for each strategy
 TODO: Show graph of average turn/score progression within a game for each strategy
@@ -246,6 +250,27 @@ class FewestNumbers(SolutionLength):
             )[0]
 
 
+class MostNumbers(SolutionLength):
+    """
+    A strategy wherein we choose the solution with the most possible numbers
+    """
+
+    def __init__(self, secondary_strategy):
+        super().__init__(secondary_strategy)
+
+    def choose_numbers(self, numbers, roll):
+        solutions = find_all_solutions(numbers, roll)
+        if solutions:
+            # Only consider solutions of the longest length
+            shortest_solution_length = max(len(solution) for solution in solutions)
+
+            # Find the solution with the lowest/highest number
+            self.answer = sorted(
+                [solution for solution in solutions if len(solution) == shortest_solution_length],
+                key=lambda sol: self.secondary_strategy(sol),
+            )[0]
+
+
 if __name__ == "__main__":
     # strategy = LowestFirst()
     # strategy = HighestFirst()
@@ -253,19 +278,16 @@ if __name__ == "__main__":
     # strategy = ExactThenHighest()
     # strategy = Random()
     # strategy = FewestNumbers(secondary_strategy=min)  # If tied, use solution with lowest number
-    strategy = FewestNumbers(
-        secondary_strategy=lambda x: -1 * max(x)
-    )  # If tied, use solution with highest number
+    # strategy = FewestNumbers(
+    #     secondary_strategy=lambda x: -1 * max(x)
+    # )  # If tied, use solution with highest number
+    strategy = MostNumbers(secondary_strategy=min)
 
-    strategy.choose_numbers([1, 2, 4, 5, 7, 8, 9], 12)
-    print(strategy.answer)
+    scores = []
+    for i in range(1000):
+        game = Game(strategy)
+        game.play()
+        scores.append(game.score())
 
-    if False:
-        scores = []
-        for i in range(1000):
-            game = Game(strategy)
-            game.play()
-            scores.append(game.score())
-
-        print("Scores:", scores)
-        print("Average:", sum(scores) / len(scores))
+    print("Scores:", scores)
+    print("Average:", sum(scores) / len(scores))
