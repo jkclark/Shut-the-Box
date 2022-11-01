@@ -43,11 +43,11 @@ class Game:
         self.strategy.choose_numbers(self.numbers, roll)
         while self.numbers and self.strategy.answer:
             # Remove numbers as determined by strategy
-            for number in strategy.answer:
+            for number in self.strategy.answer:
                 self.numbers.remove(number)
 
             # Reset strategy
-            strategy.answer = []
+            self.strategy.answer = []
 
             # Roll again
             roll = self.roll()
@@ -62,6 +62,42 @@ class Game:
 
     def score(self):
         return sum(self.numbers)
+
+
+class DualStrategyGame(Game):
+    """
+    Represents a game of shut the box that employs 2 strategies
+
+    The game changes to the second strategy once the score has fallen below
+    a specific number.
+    """
+
+    def __init__(self, strategy, strategy_2, threshold):
+        super().__init__(strategy)
+        self.strategy_2 = strategy_2
+        self.threshold = threshold
+
+    def play(self):
+        roll = self.roll()
+        strategy = self.strategy
+        strategy.choose_numbers(self.numbers, roll)
+        while self.numbers and strategy.answer:
+            # Remove numbers as determined by strategy
+            for number in strategy.answer:
+                self.numbers.remove(number)
+
+            # Reset strategy
+            strategy.answer = []
+
+            # Change strategy if score < threshold
+            if self.score() < self.threshold:
+                strategy = self.strategy_2
+
+            # Roll again
+            roll = self.roll()
+
+            # Choose number(s) to remove
+            strategy.choose_numbers(self.numbers, roll)
 
 
 class Strategy:
@@ -281,13 +317,48 @@ if __name__ == "__main__":
     # strategy = FewestNumbers(
     #     secondary_strategy=lambda x: -1 * max(x)
     # )  # If tied, use solution with highest number
-    strategy = MostNumbers(secondary_strategy=min)
+    # strategy = MostNumbers(secondary_strategy=min)
 
-    scores = []
-    for i in range(1000):
-        game = Game(strategy)
-        game.play()
-        scores.append(game.score())
+    # Head 2 Head
+    strategy_1 = ExactThenHighest()
+    strategy_2 = FewestNumbers(secondary_strategy=min)
+    strategy_1_wins = 0
+    games_to_play = 10_000
+    for i in range(games_to_play):
+        game_1 = Game(strategy_1)
+        game_2 = Game(strategy_2)
 
-    print("Scores:", scores)
-    print("Average:", sum(scores) / len(scores))
+        game_1.play()
+        game_2.play()
+
+        if game_1.score() < game_2.score():
+            strategy_1_wins += 1
+
+    print(type(strategy_1).__name__ + f": {strategy_1_wins}")
+    print(type(strategy_2).__name__ + f": {games_to_play - strategy_1_wins}")
+
+    # Dual strategy outcomes:
+    # STRATEGIES = [
+    #     LowestFirst(),
+    #     HighestFirst(),
+    #     ExactThenLowest(),
+    #     ExactThenHighest(),
+    #     Random(),
+    #     FewestNumbers(secondary_strategy=min),
+    #     MostNumbers(secondary_strategy=min),
+    # ]
+    # THRESHOLD = 10
+    # for strategy in STRATEGIES:
+    #     for strategy_2 in STRATEGIES:
+    #         scores = []
+    #         for i in range(2000):
+    #             game = DualStrategyGame(strategy, strategy_2, THRESHOLD)
+    #             game.play()
+    #             scores.append(game.score())
+
+    #         print(
+    #             "{:<35} {:>5}".format(
+    #                 f"{type(strategy).__name__} + {type(strategy_2).__name__}",
+    #                 f"{sum(scores)/ len(scores)}",
+    #             )
+    #         )
